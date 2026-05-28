@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  password  String
+  role      Role     @default(PARTICIPANT)
+  createdAt DateTime @default(now())
+
+  registration Registration?
+  tasks        TaskAssignment[]
+}
+
+enum Role {
+  PARTICIPANT
+  ORGANIZER
+  VOLUNTEER
+}
+
+model Registration {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  distance       String
+  tshirtSize     String
+  emergencyName  String
+  emergencyPhone String
+  bib            String?
+  bibQrUrl       String?
+  status         Status   @default(REGISTERED)
+  finishTime     String?
+  certificateUrl String?
+  confirmedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum Status {
+  REGISTERED
+  APPROVED
+  CONFIRMED
+  BIB_COLLECTED
+  COMPLETED
+}
+
+model Task {
+  id          String         @id @default(cuid())
+  title       String
+  category    String
+  status      TaskStatus     @default(TODO)
+  deadline    DateTime?
+  checklist   Json?
+  assignments TaskAssignment[]
+  createdAt   DateTime       @default(now())
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model TaskAssignment {
+  id     String @id @default(cuid())
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  audience  String
+  subject   String?
+  body      String
+  sentAt    DateTime @default(now())
+}
+
+model ScanLog {
+  id        String   @id @default(cuid())
+  bib       String
+  scanType  String
+  scannedBy String
+  scannedAt DateTime @default(now())
+}
