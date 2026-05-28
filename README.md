@@ -1,9 +1,46 @@
-# 🏃‍♂️ Marathon Management Portal (MMP)
+🏃 Marathon Management Portal (MMP)
 
+<<<<<<< HEAD
 A premium, full-stack platform designed to streamline marathon registrations, participant verification, BIB allocation, QR scanning, and automated finisher certificate generation.
+=======
+A full-stack platform for managing marathon registrations, participant verification, BIB allocation, QR scanning, and finisher certificate generation.
+>>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 
----
+✨ Core Features
+Multi-step runner registration
+Organizer approval workflow
+Attendance confirmation
+QR-based BIB verification
+Volunteer scanning dashboard
+Finisher certificate generation
+Email notifications & PDF delivery
+Role-based dashboards (Participant / Organizer / Volunteer)
+📌 Runner Lifecycle
+🏗️ Architecture Overview
+🛠️ Tech Stack
+Frontend
+React 19
+Vite
+Tailwind CSS
+React Router
+React Hook Form + Zod
+Axios
+TanStack Table
+Recharts
+html5-qrcode
+Backend
+Node.js
+Express.js
+Prisma ORM
+PostgreSQL
+JWT Authentication
+bcryptjs
+PDFKit
+QRCode
+Resend
+🔐 Authentication & RBAC
 
+<<<<<<< HEAD
 ## 🚀 Key Features
 
 *   **📋 Multi-Step Runner Registration:** A smooth, wizard-based onboarding experience.
@@ -17,33 +54,17 @@ A premium, full-stack platform designed to streamline marathon registrations, pa
 ## 🏛️ System Architecture
 
 ### 📊 Application Lifecycle Flow
+=======
+Roles supported:
 
-```mermaid
-graph TD
-    A[Runner: Multi-step Registration Wizard] -->|Submit Form| B(Status: REGISTERED)
-    B -->|Triggers| B1[Welcome Email with Temp Password]
-    
-    B --> C[Organizer Dashboard: Reviews & Approves]
-    C -->|Approve| D(Status: APPROVED)
-    D -->|Triggers| D1[Registration Approved Email]
-    
-    D --> E[Participant Dashboard: Runner Confirms Attendance]
-    E -->|Confirm| F(Status: CONFIRMED)
-    
-    F --> G[Organizer Dashboard: Allocates BIB Number]
-    G -->|Assign BIB & QR Code| H[BIB Assigned & QR Generated]
-    H -->|Triggers| H1[BIB Assignment Email with QR Image]
-    
-    H --> I[Volunteer Scanner: Scans QR at Bib Counter]
-    I -->|Bib Scanned & Verified| J(Status: BIB_COLLECTED)
-    
-    J --> K[Race Finishes]
-    K --> L[Organizer Dashboard: Enters Finish Time]
-    L -->|Submit Finish Stats| M(Status: COMPLETED)
-    M -->|Triggers| M1[Finisher Email & Certificate PDF]
-    M --> N[Participant Dashboard: Download Finisher Certificate]
-```
+PARTICIPANT
+ORGANIZER
+VOLUNTEER
+>>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 
+Protected APIs use:
+
+<<<<<<< HEAD
 ### 🔁 Data Flow Sequence
 
 ```mermaid
@@ -138,10 +159,17 @@ sequenceDiagram
 ## 📁 Repository Structure
 
 ```text
+=======
+JWT Authentication
+Role-based middleware
+Axios token interceptors
+📂 Project Structure
+>>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 MMP/
-├── Backend/                   # Node.js + Express API Backend
-│   ├── prisma/                # Prisma configuration & schema.prisma
+├── Backend/
+│   ├── prisma/
 │   └── src/
+<<<<<<< HEAD
 │       ├── controllers/       # Controller logic (Auth, Reg, Tasks, Certificates)
 │       ├── middleware/        # Authentication & Role validation middlewares
 │       ├── routes/            # Express route groups
@@ -156,9 +184,28 @@ MMP/
     │   └── index.css          # Styling & Tailwind configuration
     └── index.html             # Single Page HTML entry point
 ```
+=======
+│       ├── controllers/
+│       ├── middleware/
+│       ├── routes/
+│       └── services/
+│
+├── Frontend/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       ├── context/
+│       └── services/
+🚀 Local Setup
+Backend
+cd Backend
+npm install
+>>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 
----
+npx prisma generate
+npx prisma db push
 
+<<<<<<< HEAD
 ## 🚀 Local Installation & Setup
 
 ### 1️⃣ Backend Setup
@@ -203,3 +250,29 @@ MMP/
    ```
 4. **Open application**:
    Navigate to [http://localhost:5173](http://localhost:5173) in your browser.
+=======
+npm run dev
+
+Create .env:
+
+DATABASE_URL=
+JWT_SECRET=
+RESEND_API_KEY=
+Frontend
+cd Frontend
+npm install
+npm run dev
+
+Open:
+
+http://localhost:5173
+📧 Automated Workflows
+
+The system automatically handles:
+
+Welcome emails
+Approval notifications
+BIB QR emails
+Certificate generation
+Finisher completion emails
+>>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
