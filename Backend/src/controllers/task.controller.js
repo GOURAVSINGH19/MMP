@@ -11,7 +11,7 @@ export const getTasks = async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
-                role: true
+                platformRole: true
               }
             }
           }
@@ -28,7 +28,7 @@ export const getTasks = async (req, res) => {
 
 // Create a new task (Phase 9)
 export const createTask = async (req, res) => {
-  const { title, category, status, deadline, assignedUserIds } = req.body;
+  const { title, category, status, deadline, assignedUserIds, eventId } = req.body;
 
   if (!title || !category) {
     return res.status(400).json({ error: 'Title and category are required' });
@@ -41,6 +41,8 @@ export const createTask = async (req, res) => {
         category,
         status: status || 'TODO',
         deadline: deadline ? new Date(deadline) : null,
+        eventId: eventId || 'default-event',
+        createdBy: req.user.id
       }
     });
 
@@ -66,7 +68,7 @@ export const createTask = async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
-                role: true
+                platformRole: true
               }
             }
           }
@@ -131,7 +133,7 @@ export const updateTask = async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
-                role: true
+                platformRole: true
               }
             }
           }

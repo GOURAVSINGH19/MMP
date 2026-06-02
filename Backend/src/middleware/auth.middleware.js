@@ -13,7 +13,10 @@ export const authenticateJWT = (req, res, next) => {
         return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
       }
 
-      req.user = user;
+      req.user = {
+        ...user,
+        role: user.role || user.platformRole
+      };
       next();
     });
   } else {
@@ -27,7 +30,13 @@ export const requireRole = (...allowedRoles) => {
       return res.status(401).json({ error: 'Unauthorized: User context missing' });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const roleAliases = {
+      ORGANIZER: ['ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN'],
+      EVENT_MANAGER: ['EVENT_MANAGER', 'ORGANIZER'],
+    };
+    const acceptedRoles = allowedRoles.flatMap((role) => roleAliases[role] || role);
+
+    if (!acceptedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: `Forbidden: Requires one of these roles: [${allowedRoles.join(', ')}]` });
     }
 

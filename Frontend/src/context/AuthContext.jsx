@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
 
     if (token && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        setUser(normalizeUser(JSON.parse(storedUser)));
       } catch (e) {
         localStorage.removeItem('mmp_token');
         localStorage.removeItem('mmp_user');
@@ -23,10 +23,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const normalizeUser = (rawUser) => {
+    if (!rawUser) return rawUser;
+    const role = rawUser.role || rawUser.platformRole || 'PARTICIPANT';
+    return { ...rawUser, role, platformRole: rawUser.platformRole || role };
+  };
+
   const login = async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token, user: loggedUser } = response.data;
+      const { token, user: rawUser } = response.data;
+      const loggedUser = normalizeUser(rawUser);
 
       localStorage.setItem('mmp_token', token);
       localStorage.setItem('mmp_user', JSON.stringify(loggedUser));
@@ -37,10 +44,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, phone, password, role = 'PARTICIPANT') => {
+  const register = async (name, email, phone, password) => {
     try {
-      const response = await api.post('/auth/register', { name, email, phone, password, role });
-      const { token, user: registeredUser } = response.data;
+      const response = await api.post('/auth/register', { name, email, phone, password });
+      const { token, user: rawUser } = response.data;
+      const registeredUser = normalizeUser(rawUser);
 
       localStorage.setItem('mmp_token', token);
       localStorage.setItem('mmp_user', JSON.stringify(registeredUser));
@@ -58,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isParticipant = () => user?.role === 'PARTICIPANT';
-  const isOrganizer = () => user?.role === 'ORGANIZER';
+  const isOrganizer = () => ['ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN'].includes(user?.role);
   const isVolunteer = () => user?.role === 'VOLUNTEER';
 
   return (

@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,90 +7,670 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ========== USERS & AUTH ==========
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String
-  password  String
-  role      Role     @default(PARTICIPANT)
-  createdAt DateTime @default(now())
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  phone            String
+  password         String?
+  platformRole     PlatformRole @default(PARTICIPANT)
+  isBlocked        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  registration Registration?
-  tasks        TaskAssignment[]
+  // Relations
+  registrations    Registration[]
+  volunteerProfile VolunteerProfile?
+  eventAssignments EventManager[]
+  teamMemberships  TeamMember[]
+  taskAssignments  TaskAssignment[]
+  volunteerAssignments VolunteerAssignment[]
+  volunteerApplications VolunteerApplication[]
+  scanLogs         ScanLog[]
+  auditLogs        AuditLog[]
+  payments         Payment[]
+  paymentAuditLogs PaymentAuditLog[]
 }
 
-enum Role {
-  PARTICIPANT
-  ORGANIZER
+enum PlatformRole {
+  SUPER_ADMIN
+  EVENT_MANAGER
+  TEAM_MEMBER
   VOLUNTEER
+  PARTICIPANT
 }
 
+// ========== EVENTS ==========
+model Event {
+  id                   String   @id @default(uuid())
+  name                 String
+  description          String?
+  date                 DateTime
+  registrationDeadline DateTime?
+  location             String
+  eventStatus          EventStatus @default(DRAFT)
+  distances            String[] // ["5K", "10K", "21K", "42K"]
+  
+  createdBy            String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Payment configurations
+  isPaid               Boolean  @default(false)
+  registrationFee      Float    @default(0.0)
+  currency             String   @default("INR")
+  tax                  Float    @default(0.0)
+  convenienceFee       Float    @default(0.0)
+
+  // Volunteer requirements per category (JSON)
+  // Example: {"medical": 10, "water": 20, "security": 15, "checkin": 8}
+  volunteerRequirementsJson Json?
+
+  // Relations
+  managers             EventManager[]
+  registrations        Registration[]
+  participants         Participant[]
+  volunteers           VolunteerAssignment[]
+  volunteerApplications VolunteerApplication[]
+  sponsors             Sponsor[]
+  tasks                Task[]
+  bibs                 Bib[]
+  scanLogs             ScanLog[]
+  certificates         Certificate[]
+  notifications        Notification[]
+  teamMembers          TeamMember[]
+  auditLogs            AuditLog[]
+  whatsappGroups       WhatsappGroup[]
+  payments             Payment[]
+  csvImportJobs        CsvImportJob[]
+  csvExportJobs        CsvExportJob[]
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  RACE_DAY
+  COMPLETED
+  ARCHIVED
+}
+
+// ========== EVENT MANAGEMENT ==========
+model EventManager {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  role      EventManagerRole @default(MANAGER)
+  assignedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+enum EventManagerRole {
+  ORGANIZER
+  MANAGER
+  COORDINATOR
+}
+
+// ========== TEAM MEMBERS ==========
+model TeamMember {
+  id          String   @id @default(uuid())
+  userId      String
+  eventId     String
+  invitedBy   String
+  permissions String[] // ["VIEW_EVENT", "EDIT_EVENT", "MANAGE_PARTICIPANTS", "MANAGE_VOLUNTEERS", "MANAGE_SPONSORS", "MANAGE_TASKS", "VIEW_REPORTS"]
+  status      InvitationStatus @default(PENDING)
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// ========== PARTICIPANT REGISTRATION ==========
 model Registration {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id])
-  distance       String
-  tshirtSize     String
-  emergencyName  String
-  emergencyPhone String
-  bib            String?
-  bibQrUrl       String?
-  status         Status   @default(REGISTERED)
-  finishTime     String?
-  certificateUrl String?
-  confirmedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  userId          String
+  eventId         String
+  distance        String   // "5K", "10K", "21K", "42K"
+  tshirtSize      String   // "XS", "S", "M", "L", "XL", "2XL"
+  emergencyName   String
+  emergencyPhone  String
+  age             Int?
+  gender          String?
+  bloodGroup      String?
+  medicalHistory  String?
+
+  // Medical section (added for participant safety)
+  medicalCondition      String?  // "Diabetes", "Asthma", "Heart Condition", "Blood Pressure", "Other", "None"
+  medicationRequired    String?
+  medicalFlag           Boolean  @default(false)
+  emergencyContactName  String?  // alias for emergencyName for API compatibility
+  emergencyContactNumber String? // alias for emergencyPhone for API compatibility
+
+  // URLs generated post-registration
+  certificateUrl     String?
+  participantQrUrl   String?
+  
+  bibId           String?
+  finishTime      String?
+  status          RegistrationStatus @default(REGISTERED)
+  approvedBy      String?
+  approvedAt      DateTime?
+  confirmedAt     DateTime?
+  bibCollectedAt  DateTime?
+  raceStartedAt   DateTime?
+  finishedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bib         Bib?       @relation(fields: [bibId], references: [id])
+  certificate Certificate?
+  scanLogs    ScanLog[]
+  payments    Payment[]
+
+  @@unique([userId, eventId])
 }
 
-enum Status {
+enum RegistrationStatus {
   REGISTERED
   APPROVED
   CONFIRMED
   BIB_COLLECTED
   COMPLETED
+  WITHDRAWN
+  PAYMENT_PENDING
+  PAYMENT_SUCCESSFUL
+  PAYMENT_FAILED
+  REFUNDED
 }
 
+model Participant {
+  id            String   @id @default(uuid())
+  eventId       String
+  userId        String
+  registeredAt  DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+// ========== VOLUNTEER SYSTEM ==========
+model VolunteerProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  status        VolunteerStatus @default(PENDING_APPROVAL)
+  approvedAt    DateTime?
+  approvedBy    String?
+  experienceYears Int @default(0)
+  bio           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum VolunteerStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model VolunteerAssignment {
+  id              String   @id @default(uuid())
+  userId          String
+  eventId         String
+  volunteerRole   VolunteerRole
+  canScan         Boolean  @default(false)
+  assignedBy      String
+  assignedAt      DateTime @default(now())
+  shiftStart      DateTime?
+  shiftEnd        DateTime?
+  status          AssignmentStatus @default(ASSIGNED)
+  // Assignment details (set after approval)
+  assignedLocation String?
+  assignedShift    String?
+  reportingManager String?
+  createdAt       DateTime @default(now())
+
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+// Volunteer self-apply model (participant applies → organizer approves)
+model VolunteerApplication {
+  id             String   @id @default(uuid())
+  userId         String
+  eventId        String
+  volunteerType  String   // "Medical","Water","Check-In","Security","Route Marshal","Finish Line"
+  availability   String?
+  experience     String?
+  approvalStatus String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  // Set after approval
+  assignedLocation String?
+  assignedShift    String?
+  reportingManager String?
+  rejectionReason  String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("volunteer_applications")
+}
+
+enum VolunteerRole {
+  CHECK_IN
+  FINISH_LINE
+  REGISTRATION_DESK
+  MEDICAL
+  WATER_STATION
+  ROUTE_MARSHAL
+  SECURITY
+  LOGISTICS
+  END_OF_TRACK
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Bib {
+  id           String   @id @default(uuid())
+  eventId      String
+  bibNumber    String
+  QRCode       String   @unique
+  status       BibStatus @default(UNASSIGNED)
+  assignedTo   String?
+  assignedAt   DateTime?
+  collectedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+  scanLogs      ScanLog[]
+
+  @@unique([eventId, bibNumber])
+}
+
+enum BibStatus {
+  UNASSIGNED
+  ASSIGNED
+  COLLECTED
+  FINISHED
+}
+
+// ========== SCAN LOGS ==========
+model ScanLog {
+  id              String   @id @default(uuid())
+  eventId         String
+  registrationId  String
+  bibId           String
+  userId          String   // Volunteer who scanned
+  scanType        ScanType
+  volunteerRole   VolunteerRole?
+  timestamp       DateTime @default(now())
+  location        String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  bib          Bib          @relation(fields: [bibId], references: [id], onDelete: Cascade)
+  volunteer    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ScanType {
+  CHECK_IN
+  FINISH_LINE
+  MANUAL_ENTRY
+}
+
+// ========== CERTIFICATES ==========
+model Certificate {
+  id              String   @id @default(uuid())
+  registrationId  String   @unique
+  eventId         String
+  certificateUrl  String
+  generatedAt     DateTime @default(now())
+  downloadedAt    DateTime?
+  createdAt       DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// ========== SPONSORS ==========
+model Sponsor {
+  id            String   @id @default(uuid())
+  eventId       String
+  name          String
+  category      SponsorCategory
+  logoUrl       String?
+  website       String?
+  description   String?
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum SponsorCategory {
+  TITLE
+  PLATINUM
+  GOLD
+  SILVER
+  BRONZE
+}
+
+// ========== TASKS ==========
 model Task {
-  id          String         @id @default(cuid())
+  id          String   @id @default(uuid())
+  eventId     String
   title       String
-  category    String
-  status      TaskStatus     @default(TODO)
+  category    TaskCategory
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
   deadline    DateTime?
-  checklist   Json?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   assignments TaskAssignment[]
-  createdAt   DateTime       @default(now())
+}
+
+enum TaskCategory {
+  SPONSORS
+  LOGISTICS
+  BIB_DISTRIBUTION
+  TSHIRTS
+  VOLUNTEERS
+  WATER_STATIONS
+  MEDICAL
+  SECURITY
+  REGISTRATION
+  MARKETING
+  OTHER
 }
 
 enum TaskStatus {
   TODO
   IN_PROGRESS
+  BLOCKED
   DONE
 }
 
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 model TaskAssignment {
-  id     String @id @default(cuid())
-  taskId String
-  userId String
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  status    TaskStatus @default(TODO)
+  assignedAt DateTime @default(now())
+  completedAt DateTime?
 
-  task Task @relation(fields: [taskId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// ========== NOTIFICATIONS ==========
 model Notification {
-  id        String   @id @default(cuid())
-  type      String
-  audience  String
-  subject   String?
-  body      String
-  sentAt    DateTime @default(now())
+  id          String   @id @default(uuid())
+  eventId     String
+  type        NotificationType
+  recipient   NotificationRecipient
+  subject     String?
+  body        String
+  channel     Channel[] // ["EMAIL", "WHATSAPP", "SMS"]
+  sentAt      DateTime @default(now())
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
-model ScanLog {
-  id        String   @id @default(cuid())
-  bib       String
-  scanType  String
-  scannedBy String
-  scannedAt DateTime @default(now())
+enum NotificationType {
+  REGISTRATION_SUBMITTED
+  APPROVAL_GRANTED
+  BIB_ASSIGNED
+  PARTICIPATION_CONFIRMED
+  VOLUNTEER_APPROVED
+  EVENT_REMINDER
+  CERTIFICATE_GENERATED
+  RACE_DAY_ALERT
+  EMERGENCY_ALERT
+}
+
+enum NotificationRecipient {
+  ALL_PARTICIPANTS
+  ALL_VOLUNTEERS
+  APPROVED_PARTICIPANTS
+  SPECIFIC_USER
+  EVENT_MANAGERS
+}
+
+enum Channel {
+  EMAIL
+  WHATSAPP
+  SMS
+  PUSH
+}
+
+// ========== AUDIT LOGS ==========
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String?
+  action    String
+  entity    String   // "Registration", "Participant", "Volunteer", "Task"
+  entityId  String
+  changes   Json?    // Track what changed
+  timestamp DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// ========== NEW MODELS FOR PRODUCTION ==========
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+// OTP-based password reset (new flow)
+model PasswordResetOtp {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_otps")
+}
+
+model Payment {
+  id             String              @id @default(uuid())
+  registrationId String
+  userId         String
+  eventId        String
+  amount         Float
+  currency       String              @default("INR")
+  status         PaymentStatus       @default(PENDING)
+  orderId        String              @unique
+  txnId          String?
+  receiptUrl     String?             // URL to receipt PDF/page
+  receiptImageUrl String?            // URL to receipt image/screenshot
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  registration   Registration        @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event          Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  transactions   PaymentTransaction[]
+  refunds        RefundRequest[]
+  auditLogs      PaymentAuditLog[]
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+}
+
+model PaymentTransaction {
+  id              String   @id @default(uuid())
+  paymentId       String
+  gateway         String   @default("PAYTM")
+  action          String   // "CHARGE", "CALLBACK", "REFUND"
+  status          String
+  responsePayload Json?
+  createdAt       DateTime @default(now())
+
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_transactions")
+}
+
+model RefundRequest {
+  id          String   @id @default(uuid())
+  paymentId   String
+  amount      Float
+  reason      String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  processedBy String?
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("refund_requests")
+}
+
+model WhatsappGroup {
+  id        String   @id @default(uuid())
+  eventId   String
+  groupType String   // "COMMUNITY", "GENERAL_VOLUNTEER", "MEDICAL_VOLUNTEER", "WATER_STATION_VOLUNTEER", "RACE_OPERATIONS_VOLUNTEER"
+  link      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_groups")
+}
+
+model CsvImportJob {
+  id            String   @id @default(uuid())
+  eventId       String
+  importType    String   // "PARTICIPANTS", "VOLUNTEERS", "RESULTS", "SPONSORS"
+  fileName      String
+  status        String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  totalRows     Int      @default(0)
+  processedRows Int      @default(0)
+  failedRows    Int      @default(0)
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  logs          CsvImportLog[]
+
+  @@map("csv_import_jobs")
+}
+
+model CsvImportLog {
+  id         String   @id @default(uuid())
+  jobId      String
+  rowNumber  Int
+  status     String   // "SUCCESS", "ERROR"
+  message    String
+  rowData    Json?
+  createdAt  DateTime @default(now())
+
+  job        CsvImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("csv_import_logs")
+}
+
+model CsvExportJob {
+  id         String   @id @default(uuid())
+  eventId    String
+  exportType String   // "PARTICIPANTS", "VOLUNTEERS", "SPONSORS", "REGISTRATIONS", "CERTIFICATES", "TASKS"
+  format     String   // "CSV", "XLSX"
+  status     String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  fileUrl    String?
+  userId     String
+  createdAt  DateTime @default(now())
+
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("csv_export_jobs")
+}
+
+model PaymentAuditLog {
+  id        String   @id @default(uuid())
+  paymentId String?
+  userId    String
+  action    String   // "INITIATE", "SUCCESS", "FAILURE", "REFUND_REQUEST", "REFUND_SUCCESS", "REFUND_FAILURE"
+  amount    Float?
+  details   String?
+  timestamp DateTime @default(now())
+
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payment_audit_logs")
 }

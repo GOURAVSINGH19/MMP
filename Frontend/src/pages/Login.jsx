@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../components/AuthLayout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Label } from '../components/ui';
 import { LogIn, KeyRound, Mail, ArrowRight } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -24,13 +25,12 @@ export default function Login() {
       const loggedUser = await login(email, password);
       toast.success(`Welcome back, ${loggedUser.name}!`);
 
-      // Role-based navigation redirect
-      if (loggedUser.role === 'ORGANIZER') {
+      if (['ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN'].includes(loggedUser.role)) {
         navigate('/admin');
       } else if (loggedUser.role === 'VOLUNTEER') {
         navigate('/volunteer');
       } else {
-        navigate('/dashboard');
+        navigate('/events');
       }
     } catch (err) {
       toast.error(err.message || err || 'Invalid credentials');
@@ -40,24 +40,22 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4 py-8 bg-slate-50/50 dark:bg-slate-900/10">
-      <Card className="w-full max-w-md border-slate-200/50 dark:border-slate-800/40 shadow-xl transition-all duration-300">
-        <CardHeader className="space-y-1.5 text-center pb-4">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 mb-2 border border-slate-200/80 dark:border-slate-800/85">
-            <LogIn className="h-5 w-5" />
+    <AuthLayout title="Welcome back, runner" subtitle="Sign in to manage your registration, bib, and race-day updates.">
+      <Card glass className="border-slate-200/60 shadow-xl">
+        <CardHeader className="space-y-1.5 text-center pb-2">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+            <LogIn className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</CardTitle>
-          <CardDescription className="text-slate-500 dark:text-slate-400">
-            Enter your credentials to access your marathon dashboard
-          </CardDescription>
+          <CardTitle className="text-2xl">Sign in</CardTitle>
+          <CardDescription>Access your marathon dashboard</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+              <Label htmlFor="email" className="flex items-center gap-1.5 normal-case tracking-normal text-slate-600">
                 <Mail className="h-3.5 w-3.5 text-slate-400" />
-                <span>Email Address</span>
+                Email
               </Label>
               <Input
                 id="email"
@@ -72,10 +70,13 @@ export default function Login() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                <Label htmlFor="password" className="flex items-center gap-1.5 normal-case tracking-normal text-slate-600">
                   <KeyRound className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Password</span>
+                  Password
                 </Label>
+                <Link to="/forgot-password" className="text-xs font-semibold text-brand-primary hover:underline">
+                  Forgot?
+                </Link>
               </div>
               <Input
                 id="password"
@@ -89,10 +90,10 @@ export default function Login() {
             </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4 pt-2">
-            <Button type="submit" variant="glow" className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 shadow-lg" disabled={loading}>
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" variant="glow" className="w-full gap-2" disabled={loading}>
               {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-550 border-t-transparent" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
                 <>
                   <span>Sign In</span>
@@ -101,15 +102,15 @@ export default function Login() {
               )}
             </Button>
 
-            <div className="text-center text-sm text-slate-500 dark:text-slate-400">
-              New to the marathon?{' '}
-              <Link to="/register" className="font-semibold text-purple-650 dark:text-purple-400 hover:underline">
-                Register here
+            <p className="text-center text-sm text-slate-500">
+              New here?{' '}
+              <Link to="/register" className="font-semibold text-brand-primary hover:underline">
+                Create an account
               </Link>
-            </div>
+            </p>
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }

@@ -8,10 +8,11 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "prisma:generate": "npx prisma generate",
-    "prisma:push": "npx prisma db push"
+    "prisma:push": "npx prisma db push",
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.19.0",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -19,10 +20,11 @@
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.4",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "prisma": "^5.19.0"
+    "prisma": "^5.22.0"
   }
 }

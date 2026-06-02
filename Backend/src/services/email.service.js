@@ -7,7 +7,6 @@ import { Resend } from 'resend';
  */
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
-  console.log(key)
   if (key && key !== 're_placeholder') {
     return new Resend(key);
   }
@@ -27,6 +26,7 @@ const logMockEmail = (to, subject, html, attachments = []) => {
 
 export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
   const resend = getResendClient();
+  const from = process.env.RESEND_FROM_EMAIL || 'Marathon MMP <onboarding@resend.dev>';
 
   if (!resend) {
     console.warn('⚠️  RESEND_API_KEY not set or is placeholder — using mock email logger.');
@@ -37,24 +37,38 @@ export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
   console.log(`Sending real email via Resend → To: ${to} | Subject: ${subject}`);
 
   try {
-    const data = await resend.emails.send({
-      from: 'Marathon MMP <onboarding@resend.dev>',
+    const response = await resend.emails.send({
+      from,
       to,
       subject,
       html,
       attachments
     });
-    console.log(`Resend email sent successfully! ID: ${data?.data?.id || JSON.stringify(data)}`);
-    return { success: true, data };
+
+    if (response.error) {
+      console.error('Resend API error:', response.error.message || response.error);
+      throw new Error(response.error.message || JSON.stringify(response.error));
+    }
+
+    console.log(`Resend email sent successfully! ID: ${response.data?.id || JSON.stringify(response.data)}`);
+    return { success: true, data: response.data };
   } catch (error) {
     console.error('Resend API error:', error.message);
-    logMockEmail(to, subject, html, attachments);
-    return { success: true, mock: true, error: error.message };
+    throw error;
   }
 };
 
 // Email templates builders
-export const buildWelcomeTemplate = (name, email, password) => {
+export const buildWelcomeTemplate = (name, email, password, whatsappLink) => {
+  const linkHtml = whatsappLink 
+    ? `
+      <div style="background-color: #e6fffa; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #319795; text-align: center;">
+        <p style="margin: 0 0 10px 0; color: #234e52; font-weight: bold;">📣 Join the Official Marathon WhatsApp Community!</p>
+        <a href="${whatsappLink}" style="background-color: #319795; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; font-size: 14px;">Join WhatsApp Community</a>
+      </div>
+    `
+    : '';
+
   return `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #aa3bff; margin-bottom: 20px;">Welcome to the Marathon, ${name}!</h2>
@@ -65,6 +79,7 @@ export const buildWelcomeTemplate = (name, email, password) => {
         <p style="margin: 5px 0;"><strong>Username/Email:</strong> ${email}</p>
         <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background: #edf2f7; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
       </div>
+      ${linkHtml}
       <p style="font-size: 14px; color: #718096;">Please log in at your earliest convenience to check your registration details. Once the organizers approve your registration, you can confirm your spot!</p>
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
       <p style="font-size: 12px; color: #a0aec0; text-align: center;">Marathon Management Portal &copy; 2026. All rights reserved.</p>
@@ -135,6 +150,64 @@ export const buildCertificateReadyTemplate = (name, finishTime, distance) => {
       </div>
       
       <p>We are incredibly proud of your performance. See you at the next starting line!</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #a0aec0; text-align: center;">Marathon Management Portal &copy; 2026. All rights reserved.</p>
+    </div>
+  `;
+};
+
+export const buildForgotPasswordTemplate = (name, resetLink) => {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <h2 style="color: #aa3bff; margin-bottom: 20px;">Reset Your Password</h2>
+      <p>Hello ${name},</p>
+      <p>We received a request to reset your password for your Marathon Management Portal account. Click the button below to set a new password:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" style="background-color: #aa3bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+      </div>
+      <p style="color: #e53e3e; font-size: 14px;"><strong>Important:</strong> This reset link is valid for 15 minutes only and can be used only once.</p>
+      <p style="font-size: 14px; color: #718096; margin-top: 20px;">If you did not request this, please ignore this email. Your password will remain unchanged.</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #a0aec0; text-align: center;">Marathon Management Portal &copy; 2026. All rights reserved.</p>
+    </div>
+  `;
+};
+
+export const buildPasswordResetOtpTemplate = (name, otp) => {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <h2 style="color: #aa3bff; margin-bottom: 20px;">Password Reset OTP</h2>
+      <p>Hello ${name},</p>
+      <p>Use this one-time password to reset your Marathon Management Portal account password:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <span style="display: inline-block; letter-spacing: 8px; font-size: 32px; font-weight: 800; color: #111827; background: #f7fafc; border: 1px dashed #aa3bff; padding: 14px 22px; border-radius: 8px;">${otp}</span>
+      </div>
+      <p style="color: #e53e3e; font-size: 14px;"><strong>Important:</strong> This OTP is valid for 15 minutes and can be used only once.</p>
+      <p style="font-size: 14px; color: #718096; margin-top: 20px;">If you did not request this, please ignore this email. Your password will remain unchanged.</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #a0aec0; text-align: center;">Marathon Management Portal &copy; 2026. All rights reserved.</p>
+    </div>
+  `;
+};
+
+export const buildVolunteerApprovalTemplate = (name, role, whatsappLink) => {
+  const linkHtml = whatsappLink 
+    ? `
+      <div style="background-color: #e6fffa; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #319795; text-align: center;">
+        <p style="margin: 0 0 10px 0; color: #234e52; font-weight: bold;">💬 Join Your Volunteer Role WhatsApp Group!</p>
+        <a href="${whatsappLink}" style="background-color: #319795; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; font-size: 14px;">Join WhatsApp Group</a>
+      </div>
+    `
+    : '';
+
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <h2 style="color: #319795; margin-bottom: 20px;">Your Volunteer Application has been Approved!</h2>
+      <p>Hello ${name},</p>
+      <p>We are delighted to welcome you to the marathon team! Your volunteer application has been approved.</p>
+      <p>You have been assigned to the following role: <strong style="color: #319795;">${role.replace('_', ' ')}</strong>.</p>
+      ${linkHtml}
+      <p>Please log in to your dashboard to review task updates and check schedules.</p>
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
       <p style="font-size: 12px; color: #a0aec0; text-align: center;">Marathon Management Portal &copy; 2026. All rights reserved.</p>
     </div>

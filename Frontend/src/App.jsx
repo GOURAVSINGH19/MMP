@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import { ToastContainer } from 'react-toastify';
@@ -9,10 +9,16 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import RegisterMarathon from './pages/RegisterMarathon';
+import EventsRouter from './pages/EventsRouter';
+import EventDetail from './pages/EventDetail';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
 import KanbanBoard from './pages/KanbanBoard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import PaytmPayment from './pages/PaytmPayment';
+import PaymentResult from './pages/PaymentResult';
 
 // Protected Route Component to restrict access by role
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -33,7 +39,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Role check failed -> Redirect to their matching portal
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    if (user.role === 'ORGANIZER') return <Navigate to="/admin" replace />;
+    if (['ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN'].includes(user.role)) return <Navigate to="/admin" replace />;
     if (user.role === 'VOLUNTEER') return <Navigate to="/volunteer" replace />;
     return <Navigate to="/dashboard" replace />;
   }
@@ -41,19 +47,28 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+const FULL_BLEED_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+
 function AppContent() {
+  const { pathname } = useLocation();
+  const isFullBleed = FULL_BLEED_PATHS.some((p) => pathname === p || pathname.startsWith('/reset-password'));
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900/5 transition-all duration-300">
+    <div className={`min-h-screen text-slate-900 transition-all duration-300 ${isFullBleed && pathname === '/' ? 'bg-brand-dark' : 'mesh-bg'}`}>
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className={isFullBleed ? 'w-full' : 'max-w-6xl mx-auto px-4 py-6'}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/register-marathon" element={<RegisterMarathon />} />
+          <Route path="/events" element={<EventsRouter />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Participant Protected Route */}
+          {/* Participant Protected Routes */}
           <Route 
             path="/dashboard" 
             element={
@@ -62,12 +77,28 @@ function AppContent() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/paytm-checkout/:paymentId" 
+            element={
+              <ProtectedRoute allowedRoles={['PARTICIPANT']}>
+                <PaytmPayment />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payment-result" 
+            element={
+              <ProtectedRoute allowedRoles={['PARTICIPANT']}>
+                <PaymentResult />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Organizer Protected Route */}
           <Route 
             path="/admin" 
             element={
-              <ProtectedRoute allowedRoles={['ORGANIZER']}>
+              <ProtectedRoute allowedRoles={['ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN']}>
                 <OrganizerDashboard />
               </ProtectedRoute>
             } 
@@ -77,7 +108,7 @@ function AppContent() {
           <Route 
             path="/volunteer" 
             element={
-              <ProtectedRoute allowedRoles={['VOLUNTEER', 'ORGANIZER']}>
+              <ProtectedRoute allowedRoles={['VOLUNTEER', 'ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN']}>
                 <VolunteerDashboard />
               </ProtectedRoute>
             } 
@@ -87,7 +118,7 @@ function AppContent() {
           <Route 
             path="/kanban" 
             element={
-              <ProtectedRoute allowedRoles={['VOLUNTEER', 'ORGANIZER']}>
+              <ProtectedRoute allowedRoles={['VOLUNTEER', 'ORGANIZER', 'EVENT_MANAGER', 'SUPER_ADMIN']}>
                 <KanbanBoard />
               </ProtectedRoute>
             } 
@@ -106,7 +137,7 @@ export default function App() {
     <Router>
       <AuthProvider>
         <AppContent />
-        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+        <ToastContainer position="top-right" autoClose={3000} theme="light" />
       </AuthProvider>
     </Router>
   );

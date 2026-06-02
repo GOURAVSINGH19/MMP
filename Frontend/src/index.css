@@ -1,25 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@theme {
+  --color-brand-primary: #E8593C;
+  --color-brand-accent: #F0997B;
+  --color-brand-dark: #1D1D1B;
+  --color-brand-light: #F7F4F0;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --color-strip-primary: #3B6D11;
+  --color-strip-accent: #639922;
+  --color-strip-dark: #1C1C1A;
+  --color-strip-light: #EDF3E5;
+
+  /* Override standard purple colors so existing UI immediately shifts to new theme */
+  --color-purple-50: #fdf5f2;
+  --color-purple-100: #fceae5;
+  --color-purple-500: #E8593C;
+  --color-purple-600: #E8593C;
+  --color-purple-650: #E8593C;
+  --color-purple-700: #d6472a;
+  --color-purple-800: #b8341a;
+  --color-purple-900: #8f2611;
+  --color-purple-950: #1d1d1b;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --text: #4a4550;
+  --text-h: #1d1d1b;
+  --bg: #f7f4f0;
+  --border: #e2ded8;
+  --code-bg: #eae6df;
+  --accent: #E8593C;
+  --accent-bg: rgba(232, 89, 60, 0.08);
+  --accent-border: rgba(232, 89, 60, 0.4);
+  --social-bg: rgba(234, 230, 223, 0.4);
+  --shadow:
+    rgba(29, 29, 27, 0.08) 0 10px 15px -3px, rgba(29, 29, 27, 0.04) 0 4px 6px -2px;
+
+  --sans: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -32,36 +58,68 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+body {
+  margin: 0;
+  background: var(--bg);
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  margin: 0;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.mesh-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(232, 89, 60, 0.06) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 153, 34, 0.05) 0, transparent 45%),
+    radial-gradient(at 50% 100%, rgba(232, 89, 60, 0.04) 0, transparent 40%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow);
+}
+
+/* Toastify brand alignment */
+.Toastify__toast-theme--light {
+  font-family: var(--sans);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.Toastify__progress-bar-theme--light {
+  background: var(--accent);
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
+  min-width: 0;
   min-height: 100svh;
   display: flex;
   flex-direction: column;

@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Label, Select } from '../components/ui';
-import { Kanban, Plus, Trash2, Calendar, User, AlignLeft, ShieldAlert, X, AlertCircle } from 'lucide-react';
+import { Kanban, Plus, Trash2, Calendar, User, AlignLeft, ShieldAlert, X, AlertCircle, Badge } from 'lucide-react';
 
 const COLUMNS = [
   { id: 'TODO', label: 'To Do', border: 'border-blue-500/20 bg-blue-500/5', text: 'text-blue-500' },
   { id: 'IN_PROGRESS', label: 'In Progress', border: 'border-amber-500/20 bg-amber-500/5', text: 'text-amber-500' },
-  { id: 'DONE', label: 'Done', border: 'border-green-500/20 bg-green-500/5', text: 'text-green-500' }
+  { id: 'BLOCKED', label: 'Blocked', border: 'border-red-500/20 bg-red-500/5', text: 'text-red-500' },
+  { id: 'DONE', label: 'Done', border: 'border-green-500/20 bg-green-500/5', text: 'text-green-500' },
 ];
 
 export default function KanbanBoard() {
