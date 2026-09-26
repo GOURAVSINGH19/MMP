@@ -1,10 +1,6 @@
 🏃 Marathon Management Portal (MMP)
 
-<<<<<<< HEAD
-A premium, full-stack platform designed to streamline marathon registrations, participant verification, BIB allocation, QR scanning, and automated finisher certificate generation.
-=======
 A full-stack platform for managing marathon registrations, participant verification, BIB allocation, QR scanning, and finisher certificate generation.
->>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 
 ✨ Core Features
 Multi-step runner registration
@@ -54,17 +50,14 @@ Resend
 ## 🏛️ System Architecture
 
 ### 📊 Application Lifecycle Flow
-=======
 Roles supported:
 
 PARTICIPANT
 ORGANIZER
 VOLUNTEER
->>>>>>> 6888c592a4e48dc44c026f27241eb0ffc9a1ccc1
 
 Protected APIs use:
 
-<<<<<<< HEAD
 ### 🔁 Data Flow Sequence
 
 ```mermaid
@@ -250,7 +243,6 @@ npx prisma db push
    ```
 4. **Open application**:
    Navigate to [http://localhost:5173](http://localhost:5173) in your browser.
-=======
 npm run dev
 
 Create .env:
